@@ -1,6 +1,8 @@
 import base64
 import logging
 import requests
+from requests.models import HTTPError
+from urllib.parse import urlencode
 
 
 # create logger with 'spam_application'
@@ -14,7 +16,6 @@ logger.setLevel(logging.DEBUG)
 ################################################################################
 BASE_URL = "https://api.lulu.com/"
 SANDBOX_BASE_URL = "https://api.sandbox.lulu.com/"
-
 
 
 
@@ -55,16 +56,57 @@ class LuluApiClient(object):
         logging.debug("Obtained access_token=" + json_data["access_token"])
         return json_data["access_token"]
 
+    def _is_authenticated(self, headers):
+        """
+        Make a test request to an authenticated endpoint to see if auth is good.
+        """
+        TEST_ENDPOINT = self.base_url + "/print-jobs/"  # used to test auth
+        response = requests.get(TEST_ENDPOINT, headers=headers)
+        if response.status_code == 200:
+            return True
+        else:
+            print("Not authenticated", "status code=", response.status_code)
+            print("Response=", response.json())
+            return False
 
-    def get_print_jobs(self):
-        PRINTJOBS_ENDPOINT = self.base_url + "/print-jobs/"
+    def get_headers(self, preflight=True):
         headers = {
             'Cache-Control': 'no-cache',
             'Authorization': 'Bearer ' + self.bearer_token, 
         }
+        if preflight:
+            if not self._is_authenticated(headers):
+                print('Renewing bearer token...')
+                self.bearer_token = self._get_bearer_token(
+                    client_key=self.client_key,
+                    client_secret=self.client_secret
+                )
+                headers["Authorization"] = 'Bearer ' + self.bearer_token
+                if self._is_authenticated(headers):
+                    print("...bearer token successfully renewed.")
+                else:
+                    logger.error("Failed to renew bearer_token")
+                    raise HTTPError('Failed to renew bearer_token')
+        return headers
+
+
+    def get_print_jobs(self):
+        PRINTJOBS_ENDPOINT = self.base_url + "/print-jobs/"
+        headers = self.get_headers()
         response = requests.get(PRINTJOBS_ENDPOINT, headers=headers)
         assert response.status_code == 200, 'GET /print-jobs/ failed'
         return response.json()['results']
+
+
+    def get_print_shipping_options(self, **params):
+        SHIPPING_OPTIONS_ENDPOINT = self.base_url + "/print-shipping-options/"
+        url = SHIPPING_OPTIONS_ENDPOINT
+        if params:
+            url += "?" + urlencode(params)
+        headers = self.get_headers()
+        response = requests.get(url, headers=headers)
+        assert response.status_code == 200, 'GET /print-shipping-options/ failed'
+        return response.json() # ['results']
 
 
 
