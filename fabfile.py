@@ -11,6 +11,16 @@ from fabric.context_managers import cd, prefix, settings, hide
 from fabric.contrib.files import exists
 
 
+# MINIREFERENCE CONSTANTS
+################################################################################
+POD_PACKAGE_IDS = {
+    "softcover": "0550X0850BWSTDPB060UW444GXX",
+    "hardcover": "??",
+}
+
+
+
+
 # FILE STORAGE BACKEND
 ################################################################################
 env.hosts = ['52.73.72.76']
@@ -37,8 +47,6 @@ def upload_file(localpath, name=None):
         assert exists(remotepath), f"Remotepath {remotepath} doesn't exist!"
         print(green('File uplaoded to  ') + blue(remote_url))
     return remote_url
-
-
 
 
 @task

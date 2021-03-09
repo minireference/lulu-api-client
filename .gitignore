@@ -1,6 +1,9 @@
 # credentials
 credentials
 
+# Do not commit notebooks with production book data and real addresses
+notebooks/FirstTestPrintInProduction.ipynb
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

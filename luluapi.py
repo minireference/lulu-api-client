@@ -19,13 +19,6 @@ BASE_URL = "https://api.lulu.com/"
 SANDBOX_BASE_URL = "https://api.sandbox.lulu.com/"
 
 
-pod_package_ids = {
-    "softcover": "0550X0850BWSTDPB060UW444GXX",
-    "hardcover": "??",
-}
-
-
-
 
 # CLIENT
 ################################################################################
@@ -108,12 +101,17 @@ class LuluApiClient(object):
         return headers
 
 
-    def get_print_jobs(self):
+    def get_print_jobs(self, include_cancelled=False):
         PRINTJOBS_ENDPOINT = self.base_url + "/print-jobs/"
         headers = self.get_headers()
         response = requests.get(PRINTJOBS_ENDPOINT, headers=headers)
         assert response.status_code == 200, 'GET /print-jobs/ failed'
-        return response.json()['results']
+        results = response.json()['results']
+        if include_cancelled:
+            jobs = results
+        else:
+            jobs = [r for r in results if r["status"]["name"] != "CANCELED"]
+        return jobs
 
 
     def create_print_job(self, address, books, shipping_level, external_id=None):
@@ -156,7 +154,7 @@ class LuluApiClient(object):
         if response.status_code == 201:
             job_id = str(response_data["id"])
             print("Print job with id=" + job_id + " sucessfully created.")
-            print("Go to  " + self.base_url + "/" + job_id + "  for payment.")
+            print("Go to " + self.base_url+"/print-jobs/"+job_id + " to pay.")
         else:
             logger.error('POST to /print-jobs/ failed:')
             print(response_data)
